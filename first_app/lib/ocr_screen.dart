@@ -1,36 +1,10 @@
 import 'dart:io';
-import 'package:first_app/SplashScreen.dart';
+import 'package:first_app/result_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/firestore_service.dart';
-import 'services/nlp_service.dart';
-import 'result_screen.dart';
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(const one());
-}
-
-class one extends StatelessWidget {
-  const one({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Prescription Manager & OCR',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-    );
-  }
-}
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -40,26 +14,12 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  bool _isPermissionGranted = false;
-  final _textRecognizer = TextRecognizer();
-  final FirestoreService _firestoreService = FirestoreService();
   bool _isLoading = false;
+  final TextRecognizer _textRecognizer = TextRecognizer();
+  final FirestoreService _firestoreService = FirestoreService();
+  final TextEditingController _timingController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _requestPermissions();
-  }
-
-  Future<void> _requestPermissions() async {
-    final cameraStatus = await Permission.camera.request();
-    final galleryStatus = await Permission.photos.request();
-
-    setState(() {
-      _isPermissionGranted = cameraStatus == PermissionStatus.granted &&
-          galleryStatus == PermissionStatus.granted;
-    });
-  }
+  TimeOfDay? _selectedTime; // Holds selected time
 
   Future<void> _scanImage(ImageSource source) async {
     setState(() {
@@ -67,11 +27,10 @@ class _MainScreenState extends State<MainScreen> {
     });
 
     try {
-      final pictureFile = await ImagePicker().pickImage(source: source);
-      if (pictureFile == null) return;
+      final pickedFile = await ImagePicker().pickImage(source: source);
+      if (pickedFile == null) return;
 
-      final file = File(pictureFile.path);
-      final inputImage = InputImage.fromFile(file);
+      final inputImage = InputImage.fromFile(File(pickedFile.path));
       final recognizedText = await _textRecognizer.processImage(inputImage);
 
       Navigator.push(
@@ -91,13 +50,31 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  // Future<void> _selectTime() async {
+  //   TimeOfDay? pickedTime = await showTimePicker(
+  //     context: context,
+  //     initialTime: TimeOfDay.now(),
+  //   );
+
+  //   if (pickedTime != null) {
+  //     setState(() {
+  //       _selectedTime = pickedTime;
+  //       _timingController.text = _formatTime(pickedTime);
+  //     });
+  //   }
+  // }
+
+  // String _formatTime(TimeOfDay time) {
+  //   final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+  //   final minute = time.minute.toString().padLeft(2, '0');
+  //   final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+  //   return '$hour:$minute $period';
+  // }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Prescription Scanner'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Prescription Scanner')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -134,11 +111,26 @@ class _MainScreenState extends State<MainScreen> {
               icon: const Icon(Icons.image),
               label: const Text('Scan from Gallery'),
             ),
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(),
+            const SizedBox(height: 20),
+
+            // ---- COMMENTED OUT THE TIME PICKER ----
+            /*
+            TextField(
+              controller: _timingController,
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: "Select Timing",
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.access_time),
+                  onPressed: _selectTime,
+                ),
+                border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 20),
+            */
+
+            if (_isLoading) const CircularProgressIndicator(),
           ],
         ),
       ),

@@ -18,6 +18,8 @@ class _ResultScreenState extends State<ResultScreen> {
   late List<TextEditingController> _dosageControllers;
   late List<TextEditingController> _frequencyControllers;
   late List<TextEditingController> _durationControllers;
+  late List<TextEditingController>
+      _timingControllers; // Added Timing Controllers
 
   @override
   void initState() {
@@ -40,6 +42,10 @@ class _ResultScreenState extends State<ResultScreen> {
     _durationControllers = medicines
         .map((med) => TextEditingController(text: med['duration']))
         .toList();
+    _timingControllers = medicines
+        .map((_) =>
+            TextEditingController(text: "")) // Allow users to enter timing
+        .toList();
 
     // Show confirmation dialog
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -49,14 +55,19 @@ class _ResultScreenState extends State<ResultScreen> {
 
   @override
   void dispose() {
-    for (var controller in _nameControllers) controller.dispose();
-    for (var controller in _dosageControllers) controller.dispose();
-    for (var controller in _frequencyControllers) controller.dispose();
-    for (var controller in _durationControllers) controller.dispose();
+    for (var controller in [
+      ..._nameControllers,
+      ..._dosageControllers,
+      ..._frequencyControllers,
+      ..._durationControllers,
+      ..._timingControllers
+    ]) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
-  // Confirmation Dialog
+  // Confirmation Dialog (Ensures timing input)
   Future<void> _showConfirmationDialog() async {
     bool confirmed = await showDialog(
           context: context,
@@ -77,6 +88,11 @@ class _ResultScreenState extends State<ResultScreen> {
                       Text("Dosage: ${med['dosage']}"),
                       Text("Frequency: ${med['frequency']}"),
                       Text("Duration: ${med['duration']}"),
+                      TextField(
+                        controller: _timingControllers[index],
+                        decoration: const InputDecoration(
+                            labelText: "Enter Time (e.g., 08:00 AM)"),
+                      ),
                       const SizedBox(height: 10),
                     ],
                   );
@@ -112,9 +128,18 @@ class _ResultScreenState extends State<ResultScreen> {
       String dosage = _dosageControllers[i].text.trim();
       String frequency = _frequencyControllers[i].text.trim();
       String duration = _durationControllers[i].text.trim();
+      String timing = _timingControllers[i].text.trim();
+
+      if (timing.isEmpty) {
+        timing = "08:00 AM"; // Fallback default if user doesn't enter timing
+      }
+
+      print(
+          "Saving: $name, $dosage, $frequency, $duration, $timing"); // Debugging
 
       if (name.isNotEmpty && dosage.isNotEmpty && frequency.isNotEmpty) {
-        _firestoreService.addPrescription(name, dosage, frequency, duration);
+        _firestoreService.addPrescription(
+            name, dosage, frequency, duration, timing);
       }
     }
 
@@ -155,6 +180,11 @@ class _ResultScreenState extends State<ResultScreen> {
                     TextField(
                       controller: _durationControllers[index],
                       decoration: const InputDecoration(labelText: 'Duration'),
+                    ),
+                    TextField(
+                      controller: _timingControllers[index],
+                      decoration: const InputDecoration(
+                          labelText: 'Timing (e.g., 08:00 AM)'),
                     ),
                   ],
                 ),
